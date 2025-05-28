@@ -1,0 +1,23 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: telegram
+  group_by: ['...']
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token: ${TELEGRAM_BOT_TOKEN}
+        chat_id: 1382792490
+        #send_resolved: false
+        parse_mode: ''
+        message: |
+          🚨 {{ .Status | toUpper }} ALERT: {{ .CommonLabels.alertname }}
+          Severity: {{ .CommonLabels.severity }}
+          Instance: {{ .CommonLabels.instance }}
+          Job: {{ .CommonLabels.job }}
+          Description: {{ .CommonAnnotations.description }}

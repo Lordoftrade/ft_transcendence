@@ -1,0 +1,51 @@
+groups:
+  - name: system_alerts
+    rules:
+
+      - alert: HighHostCPU
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая загрузка CPU на хосте"
+          description: "Хост {{ $labels.instance }} использует более 80% CPU"
+
+      - alert: HighContainerCPU
+        expr: rate(container_cpu_usage_seconds_total{image!=""}[1m]) * 100 > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая загрузка CPU в контейнере"
+          description: "Контейнер {{ $labels.name }} с image {{ $labels.image }} использует более 80% CPU"
+
+      - alert: ContainerDown
+        expr: up{job=~"cadvisor|node_exporter|grafana|backend|frontend-admin|frontend-pong|alerting|logstash|kibana|elasticsearch"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Контейнер пропал"
+          description: "Контейнер {{ $labels.job }} недоступен по адресу {{ $labels.instance }}"
+      
+      - alert: ContainerMissing
+        expr: time() - container_last_seen{name=~"frontend-admin|frontend-pong|backend|alerting|logstash|kibana|elasticsearch"} > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Контейнер пропал"
+          description: "Контейнер {{ $labels.name }} ({{ $labels.instance }}) не отвечает более 1 минуты"
+
+      - alert: TestFakeDown
+        expr: vector(1)
+        for: 10s
+        labels:
+          severity: critical
+          job: fake_service
+          instance: fake:1234
+        annotations:
+          summary: "FAKE TEST ALERT"
+          description: "Это тестовый алерт на момент загрузки системы, не паникуй!"
+

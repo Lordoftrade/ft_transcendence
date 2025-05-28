@@ -1,0 +1,23 @@
+# devops/elk/config/elasticsearch.yml
+
+# Слушать все интерфейсы
+network.host: 0.0.0.0
+
+# Включаем встроенную безопасность
+xpack.security.enabled: true
+
+# HTTP-TLS (для REST API)
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.key:          certs/ELK.key
+xpack.security.http.ssl.certificate:  certs/ELK.crt
+xpack.security.http.ssl.client_authentication: optional
+
+# Транспортный TLS (для узлов кластера и клиентов)
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.key:          certs/ELK.key
+xpack.security.transport.ssl.certificate:  certs/ELK.crt
+xpack.security.transport.ssl.certificate_authorities: certs/ELK.crt
+
+# Одиночный узел (для dev)
+discovery.type: single-node

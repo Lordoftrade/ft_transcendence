@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "prometheus_rules.yml"
+
+scrape_configs:
+# - job_name: 'backend'
+#   scheme: https
+#   tls_config:
+#     insecure_skip_verify: true
+#   static_configs:
+#     - targets: ['backend:3000']
+
+# - job_name: 'frontend-admin'
+#   scheme: https
+#   tls_config:
+#     insecure_skip_verify: true
+#   static_configs:
+#     - targets: ['frontend-admin:443']
+
+# - job_name: 'frontend-pong'
+#   scheme: https
+#   tls_config:
+#     insecure_skip_verify: true
+#   static_configs:
+#     - targets: ['frontend-pong:443']
+
+  - job_name: 'prometheus'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+    - targets: ['localhost:9090']
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        
+  - job_name: 'grafana'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['grafana:3000']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alerting:9093

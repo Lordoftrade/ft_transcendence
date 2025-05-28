@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/certs:/app/certs
+    ports:
+      - "3000:3000"
+      - "5555:5555"
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "{{.ImageName}}/{{.FullID}}"
+    networks:
+      - monitoring-tier
+    depends_on:
+      - logstash
+
+  admin-frontend:
+    container_name: admin-frontend
+    build:
+      context: ./frontend
+      dockerfile: admin/Dockerfile
+    env_file:
+      - ./frontend/admin/.env
+    volumes:
+      - ./frontend/admin/certs:/app/admin/certs
+    ports:
+      - "8080:443"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://backend:3000
+    networks:
+      - monitoring-tier
+
+  pong-frontend:
+    container_name: pong-frontend
+    build:
+      context: ./frontend/pong
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/pong/certs:/app/certs
+    ports:
+      - "8081:443"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://backend:3000
+    networks:
+      - monitoring-tier
+
+  prometheus:
+    container_name: prometheus
+    build:
+      context: ./devops/monitoring/prometheus
+      dockerfile: Dockerfile
+    volumes:
+      - prometheus-data:/prometheus
+    ports:
+      - "9200:9090"
+    networks:
+      - monitoring-tier
+    restart: always
+
+  grafana:
+    container_name: grafana
+    build:
+      context: ./devops/monitoring/grafana 
+      dockerfile: Dockerfile
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_METRICS_ENABLED=true
+      - GF_METRICS_ENDPOINT=/metrics
+      - GF_SECURITY_SKIP_VERIFY=true 
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "9201:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring-tier
+    restart: always
+
+  node-exporter:
+    container_name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    #ports:
+    #  - "9203:9100"
+    expose:
+      - "9093"
+    volumes:
+      - /:/host:ro
+    command:
+      - '--path.rootfs=/host'
+    networks:
+      - monitoring-tier
+    restart: always
+
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    #ports:
+    #  - "9204:8080"
+    expose:
+      - "8080"
+    volumes:
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks:
+      - monitoring-tier
+    restart: always
+
+  alertmanager:
+    container_name: alerting
+    build:
+      context: ./devops/monitoring/alertmanager
+      dockerfile: Dockerfile
+    #ports:
+    #  - '9202:9093'
+    expose:
+      - "9093"
+    depends_on:
+      - prometheus
+    env_file:
+      - .env
+    networks:
+      - monitoring-tier
+    restart: always
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  monitoring-tier:
+    driver: bridge
